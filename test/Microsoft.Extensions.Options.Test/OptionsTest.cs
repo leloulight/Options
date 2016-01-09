@@ -10,7 +10,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
-namespace Microsoft.Extensions.OptionsModel.Tests
+namespace Microsoft.Extensions.Options.Tests
 {
     public class OptionsTest
     {
@@ -175,7 +175,7 @@ namespace Microsoft.Extensions.OptionsModel.Tests
                         {
                             { nameof(NullableOptions.MyNullableBool), "true" },
                             { nameof(NullableOptions.MyNullableInt), "1" },
-                            { nameof(NullableOptions.MyNullableDateTime), new DateTime(2015, 1, 1).ToString(CultureInfo.InvariantCulture.DateTimeFormat.ShortDatePattern) }
+                            { nameof(NullableOptions.MyNullableDateTime), new DateTime(2015, 1, 1).ToString(CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern) }
                         },
                         new Dictionary<string, object>
                         {
@@ -189,7 +189,7 @@ namespace Microsoft.Extensions.OptionsModel.Tests
                         {
                             { nameof(NullableOptions.MyNullableBool), "false" },
                             { nameof(NullableOptions.MyNullableInt), "-1" },
-                            { nameof(NullableOptions.MyNullableDateTime), new DateTime(1995, 12, 31).ToString(CultureInfo.InvariantCulture.DateTimeFormat.ShortDatePattern) }
+                            { nameof(NullableOptions.MyNullableDateTime), new DateTime(1995, 12, 31).ToString(CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern) }
                         },
                         new Dictionary<string, object>
                         {
@@ -302,5 +302,45 @@ namespace Microsoft.Extensions.OptionsModel.Tests
             Assert.Collection(expectedValues, assertions.ToArray());
         }
 
+        [Fact]
+        public void Options_StaticCreateCreateMakesOptions()
+        {
+            var options = Options.Create(new FakeOptions
+            {
+                Message = "This is a message"
+            });
+
+            Assert.Equal("This is a message", options.Value.Message);
+        }
+
+        [Fact]
+        public void OptionsWrapper_MakesOptions()
+        {
+            var options = new OptionsWrapper<FakeOptions>(new FakeOptions
+            {
+                Message = "This is a message"
+            });
+
+            Assert.Equal("This is a message", options.Value.Message);
+        }
+
+        [Fact]
+        public void Options_CanOverrideForSpecificTOptions()
+        {
+            var services = new ServiceCollection().AddOptions();
+
+            services.Configure<FakeOptions>(options =>
+            {
+                options.Message = "Initial value";
+            });
+
+            services.AddSingleton(Options.Create(new FakeOptions
+            {
+                Message = "Override"
+            }));
+
+            var sp = services.BuildServiceProvider();
+            Assert.Equal("Override", sp.GetRequiredService<IOptions<FakeOptions>>().Value.Message);
+        }
     }
 }
